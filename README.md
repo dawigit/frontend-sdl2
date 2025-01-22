@@ -1,3 +1,9 @@
+![Screenshot from 2025-01-20 21-01-55](https://github.com/user-attachments/assets/88c39f4d-d303-4d9a-abf1-718c0cfe3525)
+![Screenshot from 2025-01-20 21-00-41](https://github.com/user-attachments/assets/a6a2124b-fc2b-4f8a-bde5-cc9231c5a6a9)
+![Screenshot from 2025-01-20 21-00-04](https://github.com/user-attachments/assets/05a9212c-303f-422c-81d3-e247526883e9)
+
+
+
 # ProjectM SDL2 Frontend
 
 This is a reference implementation of an applicatiaon that makes use of the projectM music visualization library.
