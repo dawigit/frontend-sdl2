@@ -1,12 +1,37 @@
+
 install(TARGETS projectMSDL
         RUNTIME DESTINATION ${PROJECTMSDL_BIN_DIR}
         COMPONENT projectMSDL
         )
 
+
 install(FILES ${PROJECTM_CONFIGURATION_FILE}
         DESTINATION ${PROJECTMSDL_DATA_DIR}
         COMPONENT projectMSDL
         )
+
+set(PROJECTMSDL_ASSETS_DIR "$ENV{HOME}/.local/${PROJECTMSDL_DATA_DIR}")
+message("PROJECTMSDL_ASSETS_DIR ${PROJECTMSDL_ASSETS_DIR}")
+install(FILES src/resources/locked.png
+        DESTINATION ${PROJECTMSDL_ASSETS_DIR}
+        COMPONENT projectMSDL
+        )
+
+install(FILES src/resources/shuffle.png
+        DESTINATION ${PROJECTMSDL_ASSETS_DIR}
+        COMPONENT projectMSDL
+        )
+
+install(FILES src/resources/star0.png
+        DESTINATION ${PROJECTMSDL_ASSETS_DIR}
+        COMPONENT projectMSDL
+        )
+
+install(FILES src/resources/star1.png
+        DESTINATION ${PROJECTMSDL_ASSETS_DIR}
+        COMPONENT projectMSDL
+        )
+
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT ENABLE_FLAT_PACKAGE)
     if(ENABLE_DESKTOP_ICON)

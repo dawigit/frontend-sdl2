@@ -2,12 +2,14 @@
 
 #include "AnonymousProFont.h"
 #include "LiberationSansFont.h"
+#include "DejavuFont.h"
 #include "ProjectMWrapper.h"
 #include "SDLRenderingWindow.h"
 
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
+
 
 #include <Poco/NotificationCenter.h>
 
@@ -51,6 +53,19 @@ void ProjectMGUI::initialize(Poco::Util::Application& app)
     auto& style = ImGui::GetStyle();
     style.WindowMinSize = {128, 128};
 
+    std::string DataDir = Poco::Path::dataHome().append("projectMSDL/");
+    std::string file = DataDir;
+    //7printf("DataDir: '%s'\n",DataDir.c_str());
+    //7printf("locked: '%s'\n",std::string(file+"locked.png").c_str());
+    bool ret = LoadTextureFromFile(std::string(file+"locked.png").c_str(), &lock_image_texture, &lock_image_width, &lock_image_height);
+    IM_ASSERT(ret);
+    ret = LoadTextureFromFile(std::string(file+"shuffle.png").c_str(), &shuffle_image_texture, &shuffle_image_width, &shuffle_image_height);
+    IM_ASSERT(ret);
+    ret = LoadTextureFromFile(std::string(file+"star0.png").c_str(), &star0_image_texture, &star0_image_width, &star0_image_height);
+    IM_ASSERT(ret);
+    ret = LoadTextureFromFile(std::string(file+"star1.png").c_str(), &star1_image_texture, &star1_image_width, &star1_image_height);
+    IM_ASSERT(ret);
+    
     Poco::NotificationCenter::defaultCenter().addObserver(_displayToastNotificationObserver);
 }
 
@@ -94,8 +109,12 @@ void ProjectMGUI::UpdateFontSize()
     config.MergeMode = true;
 
     io.Fonts->Clear();
-    _uiFont = io.Fonts->AddFontFromMemoryCompressedTTF(&AnonymousPro_compressed_data, AnonymousPro_compressed_size, floor(24.0f * _textScalingFactor));
-    _toastFont = io.Fonts->AddFontFromMemoryCompressedTTF(&LiberationSans_compressed_data, LiberationSans_compressed_size, floor(40.0f * _textScalingFactor));
+    _uiFont = io.Fonts->AddFontFromMemoryCompressedTTF(&AnonymousPro_compressed_data, AnonymousPro_compressed_size, floor(48.0f * _textScalingFactor));
+    _dejavuFont = io.Fonts->AddFontFromMemoryCompressedTTF(&Dejavu_compressed_data, Dejavu_compressed_size, floor(64.0f * _textScalingFactor));
+    _toastFont = io.Fonts->AddFontFromMemoryCompressedTTF(&LiberationSans_compressed_data, LiberationSans_compressed_size, floor(96.0f * _textScalingFactor));
+    _dejavuFontL = io.Fonts->AddFontFromMemoryCompressedTTF(&Dejavu_compressed_data, Dejavu_compressed_size, floor(128.0f * _textScalingFactor));
+    _kaffeeFont = io.Fonts->AddFontFromMemoryCompressedTTF(&LiberationSans_compressed_data, LiberationSans_compressed_size, floor(148.0f * _textScalingFactor));
+    //_freeFont = io.Fonts->AddFontFromMemoryCompressedTTF(&FreeMonoBold_compressed_data, FreeMonoBold_compressed_size, floor(96.0f * _textScalingFactor));
     io.Fonts->Build();
     ImGui_ImplOpenGL3_CreateFontsTexture();
 
@@ -125,7 +144,7 @@ bool ProjectMGUI::Visible() const
 void ProjectMGUI::Draw()
 {
     // Don't render UI at all if there's no need.
-    if (!_toast && !_visible)
+    if (!_toast && !_visible && !_permTextVisible)
     {
         return;
     }
@@ -148,10 +167,14 @@ void ProjectMGUI::Draw()
 
     if (_toast)
     {
-        if (!_toast->Draw(secondsSinceLastFrame))
-        {
-            _toast.reset();
+        if(_toast->getToastText().find("PRESET:")==0){
+            _permText = _toast->getToastText().substr(strlen("PRESET:")-1);
+            _permText = _permText.substr(_permText.find_last_of("/")+1); // remove path prefix
+            _permText = _permText.substr(0,_permText.size()-5); // remove '.milk' extension
+            //fprintf(stderr,"_permText: '%s'\n",_permText.c_str());
         }
+        //if (!_toast->Draw(secondsSinceLastFrame)){_toast.reset();}
+        _toast.reset();
     }
 
     if (_visible)
@@ -160,6 +183,14 @@ void ProjectMGUI::Draw()
         _settingsWindow.Draw();
         _aboutWindow.Draw();
         _helpWindow.Draw();
+    }
+    
+    //either menu or permanent info visible
+    if(_permTextVisible && !_visible)
+    { 
+        if (_permText.size()>0){       
+            DrawPermText(_permText);    
+        }
     }
 
     ImGui::Render();
@@ -188,6 +219,11 @@ void ProjectMGUI::PushUIFont()
     ImGui::PushFont(_uiFont);
 }
 
+void ProjectMGUI::PushFreeFont()
+{
+    ImGui::PushFont(_freeFont);
+}
+
 void ProjectMGUI::PopFont()
 {
     ImGui::PopFont();
@@ -210,8 +246,6 @@ void ProjectMGUI::ShowHelpWindow()
 
 float ProjectMGUI::GetScalingFactor()
 {
-    int windowWidth;
-    int windowHeight;
     int renderWidth;
     int renderHeight;
 
@@ -229,4 +263,148 @@ void ProjectMGUI::DisplayToastNotificationHandler(const Poco::AutoPtr<DisplayToa
     {
         _toast = std::make_unique<ToastMessage>(notification->ToastText(), 3.0f);
     }
+}
+
+void ProjectMGUI::DrawPermText(std::string permText)
+{
+    constexpr ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDecoration |
+                                             ImGuiWindowFlags_AlwaysAutoResize |
+                                             ImGuiWindowFlags_NoSavedSettings |
+                                             ImGuiWindowFlags_NoFocusOnAppearing |
+                                             ImGuiWindowFlags_NoNav |
+                                             ImGuiWindowFlags_NoMove;
+    
+    bool locked = false;
+    bool shuffle = false;
+    if (Poco::Util::Application::instance().config().getBool("projectM.presetLocked", true)){
+        locked = true;
+    }
+    if (Poco::Util::Application::instance().config().getBool("projectM.shuffleEnabled", true)){
+        shuffle = true;
+    }
+    if(!_visible){
+
+    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always, ImVec2(0.0f, 0.0f));
+    float alpha = 0.6f;
+    int textWidth;
+    int playcountWidth;
+    ImGui::SetNextWindowBgAlpha(0.35f * alpha);
+    ImGui::Begin("PermText", &_permTextVisible, windowFlags);
+    ImFont* FontList[5]{_kaffeeFont,_dejavuFontL,_toastFont,_dejavuFont,_uiFont};
+    int font_index = 0;
+    int cursor_x = 0;
+    if(shuffle){
+        ImGui::Image((ImTextureID)(intptr_t)shuffle_image_texture, ImVec2(shuffle_image_width, shuffle_image_height));    
+        ImGui::SameLine();
+        cursor_x += shuffle_image_width;
+    }
+    if(locked){
+        ImGui::Image((ImTextureID)(intptr_t)lock_image_texture, ImVec2(lock_image_width, lock_image_height));
+        ImGui::SameLine();
+        cursor_x += lock_image_width;
+    }
+    cursor_x += 32;
+    SDL_GetWindowSize(_renderingWindow, &windowWidth, &windowHeight);
+    float ww = windowWidth - cursor_x;
+    ImGui::PushFont(FontList[font_index]);
+    
+    do{
+        ImGui::PopFont();
+        ImGui::PushFont(FontList[font_index++]);
+        if(font_index>4)break;
+        textWidth   = ImGui::CalcTextSize(_permText.c_str()).x;
+    
+    
+    }while(textWidth > ww);
+    ww += cursor_x;
+    //printf("cx %d tw %d ww %d \n", cursor_x, textWidth, windowWidth);
+    ImGui::Text(" %s ", _permText.c_str());
+    PopFont();
+
+    int rating = _projectMWrapper->GetRating();
+    int playcount = _projectMWrapper->GetPlayCount();
+    std::string spc = std::to_string(playcount);
+
+    int i=0;
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+    while(i<rating){
+        ImGui::Image((ImTextureID)(intptr_t)star1_image_texture, ImVec2(star1_image_width, star1_image_height));
+        ImGui::SameLine();
+        ++i;
+    }
+    int i2=5-rating;
+    while(i2){
+        ImGui::Image((ImTextureID)(intptr_t)star0_image_texture, ImVec2(star0_image_width, star0_image_height));
+        ImGui::SameLine();  
+        --i2;
+    }
+    ImGui::PopStyleVar();
+    ImGui::Dummy(ImVec2(2*star0_image_width, 0.0f));
+  
+    ImGui::PushFont(_kaffeeFont);
+    playcountWidth = ImGui::CalcTextSize(spc.c_str()).x;
+    ImGui::SameLine(ImGui::GetWindowWidth()-(playcountWidth+24));
+
+    ImGui::Text("%s",spc.c_str());
+    ImGui::PopFont();
+    
+    if (!_broughtToFront){
+        ImGui::SetWindowFocus();
+        _broughtToFront = true;
+    }
+    ImGui::End();
+
+    } // if(!Visible()){
+    
+}
+
+
+
+// Simple helper function to load an image into a OpenGL texture with common settings
+bool ProjectMGUI::LoadTextureFromMemory(const void* data, size_t data_size, GLuint* out_texture, int* out_width, int* out_height)
+{
+    // Load from file
+    int image_width = 0;
+    int image_height = 0;
+    unsigned char* image_data = stbi_load_from_memory((const unsigned char*)data, (int)data_size, &image_width, &image_height, NULL, 4);
+    if (image_data == NULL)
+        return false;
+
+    // Create a OpenGL texture identifier
+    GLuint image_texture;
+    glGenTextures(1, &image_texture);
+    glBindTexture(GL_TEXTURE_2D, image_texture);
+
+    // Setup filtering parameters for display
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Upload pixels into texture
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+    stbi_image_free(image_data);
+
+    *out_texture = image_texture;
+    *out_width = image_width;
+    *out_height = image_height;
+
+    return true;
+}
+
+// Open and read a file, then forward to LoadTextureFromMemory()
+bool ProjectMGUI::LoadTextureFromFile(const char* file_name, GLuint* out_texture, int* out_width, int* out_height)
+{
+    FILE* f = fopen(file_name, "rb");
+    if (f == NULL)
+        return false;
+    fseek(f, 0, SEEK_END);
+    size_t file_size = (size_t)ftell(f);
+    if (file_size == -1)
+        return false;
+    fseek(f, 0, SEEK_SET);
+    void* file_data = IM_ALLOC(file_size);
+    fread(file_data, 1, file_size, f);
+    bool ret = LoadTextureFromMemory(file_data, file_size, out_texture, out_width, out_height);
+    IM_FREE(file_data);
+    return ret;
 }

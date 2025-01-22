@@ -48,3 +48,4 @@ bool ToastMessage::Draw(float lastFrameTime)
 
     return _displayTimeLeft > .0f;
 }
+

@@ -12,6 +12,15 @@
 #include <SDL2/SDL_opengl.h>
 
 #include <cmath>
+#include <map>
+
+inline bool ProjectMWrapper::put(int rating, int playcount, std::string name)
+{
+    sprintf(buffer, "%d %d %s\n", rating, playcount, name.c_str() );
+    size_t i = fwrite (buffer , strlen(buffer), sizeof(char), filedb);
+    //printf("[%ld] %ld buffer: %s", i, strlen(buffer), buffer);
+    return true;
+}
 
 const char* ProjectMWrapper::name() const
 {
@@ -24,6 +33,7 @@ void ProjectMWrapper::initialize(Poco::Util::Application& app)
     _projectMConfigView = projectMSDLApp.config().createView("projectM");
     _userConfig = projectMSDLApp.UserConfiguration();
     poco_information_f1(_logger, "Events enabled: %?d", _projectMConfigView->eventsEnabled());
+
 
     if (!_projectM)
     {
@@ -87,7 +97,7 @@ void ProjectMWrapper::initialize(Poco::Util::Application& app)
         }
 
         projectm_playlist_set_shuffle(_playlist, _projectMConfigView->getBool("shuffleEnabled", true));
-
+        
         for (const auto& presetPath : presetPaths)
         {
             Poco::File file(presetPath);
@@ -105,7 +115,35 @@ void ProjectMWrapper::initialize(Poco::Util::Application& app)
         projectm_playlist_sort(_playlist, 0, projectm_playlist_size(_playlist), SORT_PREDICATE_FILENAME_ONLY, SORT_ORDER_ASCENDING);
 
         projectm_playlist_set_preset_switched_event_callback(_playlist, &ProjectMWrapper::PresetSwitchedEvent, static_cast<void*>(this));
+
+        
+        
     }
+    
+    filedb = fopen("dbpresets", "r+");
+    if(filedb){
+        char* line = NULL;
+        size_t len = 0;
+        size_t pli = 0;
+        int rating, playcount;
+        ssize_t nread;
+        std::string name;
+        while ((nread = getline(&line, &len, filedb)) != -1){
+            std::stringstream is(line);
+            is << line;
+            is >> rating;
+            is >> playcount;
+            name = std::string(line).substr(2);
+            name = name.substr(name.find_first_of(" ")+1);
+            name = name.substr(0,name.size()-1);
+            //printf("<- %d %d '%s'\n",rating, playcount, name.c_str());
+            dbpm.insert(std::pair<std::string,DBPreset>(name,DBPreset{rating,playcount}));
+            //printf("* %d %d '%s'\n",dbpm[name].rating, dbpm[name].playcount, name.c_str());
+        }
+        if(line)free(line);
+        fclose(filedb);
+    }
+
 
     Poco::NotificationCenter::defaultCenter().addObserver(_playbackControlNotificationObserver);
 
@@ -119,6 +157,25 @@ void ProjectMWrapper::uninitialize()
     _userConfig->propertyRemoved -= Poco::delegate(this, &ProjectMWrapper::OnConfigurationPropertyRemoved);
     _userConfig->propertyChanged -= Poco::delegate(this, &ProjectMWrapper::OnConfigurationPropertyChanged);
     Poco::NotificationCenter::defaultCenter().removeObserver(_playbackControlNotificationObserver);
+    if(filedb)fclose(filedb);
+    filedb = fopen("dbpresets", "w");
+        
+    size_t pli = 0;
+    char* plitem=NULL;
+    while(true){
+        plitem  =  projectm_playlist_item(_playlist, pli);
+        if(plitem){
+            if(dbpm.count(plitem)>0 && dbpm[plitem].playcount>0){
+                put(dbpm[plitem].rating, dbpm[plitem].playcount, std::string(plitem) );
+                free(plitem);
+            }
+            ++pli;
+        }else{
+            printf("last\n");
+            break;
+        }
+    }
+
 
     if (_projectM)
     {
@@ -131,6 +188,10 @@ void ProjectMWrapper::uninitialize()
         projectm_playlist_destroy(_playlist);
         _playlist = nullptr;
     }
+    
+    if(filedb)fclose(filedb);
+
+
 }
 
 projectm_handle ProjectMWrapper::ProjectM() const
@@ -206,11 +267,36 @@ std::string ProjectMWrapper::ProjectMRuntimeVersion()
     return projectMRuntimeVersion;
 }
 
+int ProjectMWrapper::PresetExists(std::string pName){
+    int c = dbpm.count(pName);
+    return c;
+}
+
 void ProjectMWrapper::PresetSwitchedEvent(bool isHardCut, unsigned int index, void* context)
 {
     auto that = reinterpret_cast<ProjectMWrapper*>(context);
     auto presetName = projectm_playlist_item(that->_playlist, index);
+    std::string pname(presetName);
+    
+    that->_presetName = pname;
+    int pc = 0;
+    size_t c = that->dbpm.count(pname);
+    int r = projectm_get_preset_rating(that->_projectM);
+    printf("dbmp:[%ld] (%d) '%s'\n", c, r, pname.c_str());
+    if(c>0){
+        pc = that->dbpm[pname].playcount;
+        r = that->dbpm[pname].rating;
+    }else{
+        that->dbpm.insert(std::pair<std::string,DBPreset>(pname,DBPreset{r,pc}));        
+        that->dbpm[pname].rating = r;
+    }
+    ++that->dbpm[pname].playcount;  // = that->dbpm[pname].playcount +1;
+    that->_presetRating = that->dbpm[pname].rating;
+    that->_presetPlaycount = that->dbpm[pname].playcount;
+
     poco_information_f1(that->_logger, "Displaying preset: %s", std::string(presetName));
+    Poco::NotificationCenter::defaultCenter().postNotification(
+        new DisplayToastNotification(Poco::format("PRESET: %s", std::string(presetName))));
     projectm_playlist_free_string(presetName);
 
     Poco::NotificationCenter::defaultCenter().postNotification(new UpdateWindowTitleNotification);
@@ -332,3 +418,34 @@ void ProjectMWrapper::OnConfigurationPropertyRemoved(const std::string& key)
         projectm_set_mesh_size(_projectM, _projectMConfigView->getUInt64("meshX", 48), _projectMConfigView->getUInt64("meshY", 32));
     }
 }
+
+int ProjectMWrapper::GetRating(){
+    if(!dbpm.count(_presetName))return projectm_get_preset_rating(_projectM);
+    return dbpm[_presetName].rating;
+}
+
+int ProjectMWrapper::GetPlayCount(){
+    return dbpm[_presetName].playcount;
+}
+
+int ProjectMWrapper::GetPlayCount(std::string pName){
+    return dbpm[pName].playcount;
+}
+
+void ProjectMWrapper::RatingDown(){
+    if( dbpm[_presetName].rating > 0 ) dbpm[_presetName].rating--;
+}
+
+void ProjectMWrapper::RatingUp(){
+    if( dbpm[_presetName].rating < 5 ) dbpm[_presetName].rating++;
+}
+
+void ProjectMWrapper::SetRating(int rating){
+    if(rating <0 || rating >5)return;
+    dbpm[_presetName].rating = rating;
+}
+
+void ProjectMWrapper::SetPlaycount(int playcount){
+    dbpm[_presetName].playcount = playcount;
+}
+

@@ -170,7 +170,6 @@ void RenderLoop::KeyEvent(const SDL_KeyboardEvent& event, bool down)
     {
         return;
     }
-
     switch (keyCode)
     {
         case SDLK_ESCAPE:
@@ -254,6 +253,41 @@ void RenderLoop::KeyEvent(const SDL_KeyboardEvent& event, bool down)
             // Decrease beat sensitivity
             _projectMWrapper.ChangeBeatSensitivity(-0.01f);
             break;
+
+        case SDLK_LEFT:
+            _projectMWrapper.RatingDown();
+            break;
+
+        case SDLK_RIGHT:
+            _projectMWrapper.RatingUp();
+            break;
+        case SDLK_TAB: 
+            _projectMWrapper.SetRating(0); 
+            break;
+        
+        case SDLK_o: 
+            _projectMWrapper.SetRating(0); 
+            break;
+
+        case SDLK_0: 
+            _projectMWrapper.SetRating(0); 
+            break;
+        case SDLK_1: 
+            _projectMWrapper.SetRating(1); 
+            break;
+        case SDLK_2: 
+            _projectMWrapper.SetRating(2); 
+            break;
+        case SDLK_3: 
+            _projectMWrapper.SetRating(3); 
+            break;
+        case SDLK_4: 
+            _projectMWrapper.SetRating(4); 
+            break;
+        case SDLK_5: 
+            _projectMWrapper.SetRating(5); 
+            break;
+
     }
 }
 

@@ -17,6 +17,7 @@ public:
      * @return True if the toast message should still be displayed, false if not.
      */
     bool Draw(float lastFrameTime);
+    std::string getToastText(){return _toastText;}
 
 private:
 

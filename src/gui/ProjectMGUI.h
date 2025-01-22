@@ -9,7 +9,8 @@
 #include "notifications/DisplayToastNotification.h"
 
 #include <SDL2/SDL.h>
-
+#include "stb/stb_image.h"
+#include "GL/gl.h"
 #include <Poco/Logger.h>
 #include <Poco/NObserver.h>
 
@@ -85,6 +86,11 @@ public:
     void PushUIFont();
 
     /**
+     * @brief Pushes the "Free" font to the render stack
+     */
+    void PushFreeFont();
+
+    /**
      * @brief Pops the last font from the stack
      */
     void PopFont();
@@ -114,12 +120,17 @@ private:
     Poco::NObserver<ProjectMGUI, DisplayToastNotification> _displayToastNotificationObserver{*this, &ProjectMGUI::DisplayToastNotificationHandler};
 
     std::string _uiIniFileName; //!< Path and filename of the UI configuration (positions etc.)
+    std::string ConfigDir;
 
     SDL_Window* _renderingWindow{nullptr}; //!< Pointer to the SDL window used for rendering.
     SDL_GLContext _glContext{nullptr}; //!< Pointer to the OpenGL context associated with the window.
     ImFont* _uiFont{nullptr}; //!< Main UI font (monospaced).
     ImFont* _toastFont{nullptr}; //!< Toast message font (sans-serif, larger).
-
+    ImFont* _freeFont{nullptr};    //!< Fonts.
+    ImFont* _dejavuFont{nullptr};  //!< Fonts.
+    ImFont* _dejavuFontL{nullptr}; //!< Fonts.
+    ImFont* _kaffeeFont{nullptr};  //!< Fonts.
+    
     uint64_t _lastFrameTicks{0}; //!< Tick count of the last frame (see SDL_GetTicks64)
 
     float _textScalingFactor{0.0f}; //!< The text scaling factor.
@@ -134,4 +145,32 @@ private:
     bool _visible{false}; //!< Flag for settings window visibility.
 
     Poco::Logger& _logger{Poco::Logger::get("ProjectMGUI")}; //!< The class logger.
+
+    std::string _permText;
+    bool _broughtToFront{false};
+    bool _permTextVisible{true};
+
+    int lock_image_width = 0;
+    int lock_image_height = 0;
+    GLuint lock_image_texture = 0;
+    
+    int shuffle_image_width = 0;
+    int shuffle_image_height = 0;
+    GLuint shuffle_image_texture = 0;
+
+    int    star0_image_width = 0;
+    int    star0_image_height = 0;
+    GLuint star0_image_texture = 0;
+
+    int    star1_image_width = 0;
+    int    star1_image_height = 0;
+    GLuint star1_image_texture = 0;
+
+    int windowWidth;
+    int windowHeight;
+    
+    void DrawPermText(std::string permText);
+    bool LoadTextureFromFile(const char* file_name, GLuint* out_texture, int* out_width, int* out_height);
+    bool LoadTextureFromMemory(const void* data, size_t data_size, GLuint* out_texture, int* out_width, int* out_height);
+
 };

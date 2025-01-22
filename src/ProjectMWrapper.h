@@ -7,11 +7,28 @@
 
 #include <Poco/Logger.h>
 #include <Poco/NObserver.h>
+//#include <Poco/LinearHashTable.h>
 
 #include <Poco/Util/AbstractConfiguration.h>
 #include <Poco/Util/Subsystem.h>
-
 #include <memory>
+#include <fstream>
+#include <limits>
+#include <iostream>
+#include <sstream>
+#include <unistd.h>
+
+struct PresetItem{
+        int rating{0};
+        int playcount{0};
+        std::string name;
+};
+
+struct DBPreset{
+        int rating{0};
+        int playcount{0};
+};
+
 
 class ProjectMWrapper : public Poco::Util::Subsystem
 {
@@ -75,6 +92,19 @@ public:
      */
     std::string ProjectMRuntimeVersion();
 
+    int PresetExists(std::string pName);
+
+    int GetRating();
+    int GetPlayCount();
+    int GetPlayCount(std::string pName);
+
+
+    void RatingUp();
+    void RatingDown();
+    void SetRating(int rating);
+    void SetPlaycount(int playcount);
+
+
 private:
     /**
      * @brief projectM callback. Called whenever a preset is switched.
@@ -109,4 +139,17 @@ private:
     Poco::NObserver<ProjectMWrapper, PlaybackControlNotification> _playbackControlNotificationObserver{*this, &ProjectMWrapper::PlaybackControlNotificationHandler};
 
     Poco::Logger& _logger{Poco::Logger::get("SDLRenderingWindow")}; //!< The class logger.
+    
+    typedef std::map<std::string, DBPreset> DBPM;
+    DBPM dbpm;
+
+    std::string _presetName;
+    int _presetRating;
+    int _presetPlaycount;
+    
+    FILE *filedb;
+    char buffer[1024];
+    
+    bool put(int rating, int playcount, std::string name);
+
 };

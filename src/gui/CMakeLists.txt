@@ -18,9 +18,16 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/LiberationSansFont.h"
         MAIN_DEPENDENCY "${CMAKE_SOURCE_DIR}/src/resources/LiberationSans-Regular.ttf"
         )
 
+add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/DejavuFont.h"
+        COMMAND ${BINARY_TO_COMPRESSED_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/resources/DejaVuSans.ttf" Dejavu > "${CMAKE_CURRENT_BINARY_DIR}/DejavuFont.h"
+        MAIN_DEPENDENCY "${CMAKE_SOURCE_DIR}/src/resources/DejaVuSans.ttf"
+        )
+
+
 add_library(ProjectMSDL-GUI STATIC
         "${CMAKE_CURRENT_BINARY_DIR}/AnonymousProFont.h"
         "${CMAKE_CURRENT_BINARY_DIR}/LiberationSansFont.h"
+        "${CMAKE_CURRENT_BINARY_DIR}/DejavuFont.h"
         AboutWindow.cpp
         AboutWindow.h
         FileChooser.cpp
@@ -56,6 +63,7 @@ target_link_libraries(ProjectMSDL-GUI
         PUBLIC
         Poco::Util
         ImGui
+        stb
         libprojectM::projectM
         "$<$<PLATFORM_ID:Darwin>:-framework ApplicationServices>"
         )
