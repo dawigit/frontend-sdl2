@@ -1,7 +1,12 @@
+
+
 ![Screenshot from 2025-01-20 21-01-55](https://github.com/user-attachments/assets/88c39f4d-d303-4d9a-abf1-718c0cfe3525)
 ![Screenshot from 2025-01-20 21-00-41](https://github.com/user-attachments/assets/a6a2124b-fc2b-4f8a-bde5-cc9231c5a6a9)
 ![Screenshot from 2025-01-20 21-00-04](https://github.com/user-attachments/assets/05a9212c-303f-422c-81d3-e247526883e9)
 
+![Screenshot from 2025-02-05 22-46-09](https://github.com/user-attachments/assets/21b3366c-e442-44bd-98d9-cdcc00dd0dd7)
+![Screenshot from 2025-02-05 22-47-14](https://github.com/user-attachments/assets/d318e479-a131-446d-aecb-43b971803afa)
+![Screenshot from 2025-02-05 22-48-34](https://github.com/user-attachments/assets/8bcc0f35-05f3-42e0-a11f-033949fbd7a2)
 
 
 # ProjectM SDL2 Frontend
