@@ -39,6 +39,11 @@ private:
     void DrawWindowSettingsTab();
 
     /**
+     * @brief Draws the MPD settings tab.
+     */
+    void DrawMPDSettingsTab();
+
+    /**
      * @brief Draws the audio settings tab.
      */
     void DrawAudioSettingsTab();
@@ -65,6 +70,12 @@ private:
      * @param property The property name in the config.
      */
     void PathSetting(const std::string& property);
+
+    /**
+     * @brief Displays an editable path/file field, with a directory/file chooser button.
+     * @param property The property name in the config.
+     */
+    void FileSetting(const std::string& property);
 
     /**
      * @brief Displays a checkbox.
@@ -136,4 +147,5 @@ private:
     Poco::AutoPtr<Poco::Util::MapConfiguration> _commandLineConfiguration;
 
     FileChooser _pathChooser{FileChooser::Mode::Directory}; //!< The file chooser dialog to select preset and texture paths.
+    FileChooser _fileChooser{FileChooser::Mode::File}; //!< The file chooser dialog to select preset and texture paths.
 };

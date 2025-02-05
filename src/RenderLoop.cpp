@@ -61,7 +61,6 @@ void RenderLoop::PollEvents()
     while (SDL_PollEvent(&event))
     {
         _projectMGui.ProcessInput(event);
-
         switch (event.type)
         {
             case SDL_MOUSEWHEEL:
@@ -103,6 +102,10 @@ void RenderLoop::PollEvents()
 
                 break;
 
+            case SDL_MOUSEMOTION:
+                _projectMGui.GotMouseMotion();
+                break;
+
             case SDL_QUIT:
                 _wantsToQuit = true;
                 break;
@@ -134,11 +137,12 @@ void RenderLoop::KeyEvent(const SDL_KeyboardEvent& event, bool down)
     auto keyCode{event.keysym.sym};
     bool modifierPressed{false};
 
+
     if (keyModifier & KMOD_LGUI || keyModifier & KMOD_RGUI || keyModifier & KMOD_LCTRL)
     {
         modifierPressed = true;
     }
-
+   // if(keyCode&&keyModifier) fprintf(stderr,"key: %02x [%02x]\n",keyCode,keyModifier);
     // Handle modifier keys and save state for use in other methods, e.g. mouse events
     switch (keyCode)
     {
@@ -170,6 +174,7 @@ void RenderLoop::KeyEvent(const SDL_KeyboardEvent& event, bool down)
     {
         return;
     }
+    
     switch (keyCode)
     {
         case SDLK_ESCAPE:
@@ -198,11 +203,35 @@ void RenderLoop::KeyEvent(const SDL_KeyboardEvent& event, bool down)
             break;
 
         case SDLK_i:
-            if (modifierPressed)
-            {
-                _audioCapture.NextAudioDevice();
-            }
+            if (keyModifier == 0x201 || keyModifier == 0x2001) {_projectMWrapper.SetCD(cursordir_shift_up);break;}
+            if (keyModifier == 0x200 || keyModifier == 0x2000) {_projectMWrapper.SetCursorDirUp();break;}
+            if (modifierPressed)      {_audioCapture.NextAudioDevice();}
             break;
+
+        case SDLK_k:
+            if (keyModifier == 0x201 || keyModifier == 0x2001) {_projectMWrapper.SetCD(cursordir_shift_down);break;}
+            if (keyModifier == 0x200 || keyModifier == 0x2000) {_projectMWrapper.SetCursorDirDown();}
+            break;
+
+        case SDLK_o:
+            if (keyModifier == 0x201 || keyModifier == 0x2001) {_projectMWrapper.SetCD(cursordir_shift_pagedown);break;}
+            if (keyModifier == 0x200 || keyModifier == 0x2000) {_projectMWrapper.SetCursorDirPageDown();break;}
+            _projectMWrapper.SetRating(0); 
+            break;
+
+        case SDLK_u:
+            if (keyModifier == 0x201 || keyModifier == 0x2001) {_projectMWrapper.SetCD(cursordir_shift_pageup);break;}
+            if (keyModifier == 0x200 || keyModifier == 0x2000) {_projectMWrapper.SetCursorDirPageUp();}
+            break;
+
+        case SDLK_s:
+            _projectMWrapper.MPDSetSingle(!_projectMWrapper.MPDGetSingle());
+            break;
+
+        case SDLK_e:
+            _projectMWrapper.MPDSetRepeat(!_projectMWrapper.MPDGetRepeat());
+            break;
+
 
         case SDLK_m:
             if (modifierPressed)
@@ -244,31 +273,25 @@ void RenderLoop::KeyEvent(const SDL_KeyboardEvent& event, bool down)
             Poco::NotificationCenter::defaultCenter().postNotification(new PlaybackControlNotification(PlaybackControlNotification::Action::TogglePresetLocked));
             break;
 
-        case SDLK_UP:
+        case SDLK_PLUS:
+            if (modifierPressed){_projectMWrapper.MPDVolumeUp();break;}
             // Increase beat sensitivity
             _projectMWrapper.ChangeBeatSensitivity(0.01f);
             break;
-
-        case SDLK_DOWN:
+        case SDLK_MINUS:
+            if (modifierPressed){_projectMWrapper.MPDVolumeDown();break;}
             // Decrease beat sensitivity
             _projectMWrapper.ChangeBeatSensitivity(-0.01f);
             break;
-
         case SDLK_LEFT:
             _projectMWrapper.RatingDown();
             break;
-
         case SDLK_RIGHT:
             _projectMWrapper.RatingUp();
             break;
         case SDLK_TAB: 
             _projectMWrapper.SetRating(0); 
             break;
-        
-        case SDLK_o: 
-            _projectMWrapper.SetRating(0); 
-            break;
-
         case SDLK_0: 
             _projectMWrapper.SetRating(0); 
             break;
@@ -287,7 +310,35 @@ void RenderLoop::KeyEvent(const SDL_KeyboardEvent& event, bool down)
         case SDLK_5: 
             _projectMWrapper.SetRating(5); 
             break;
-
+        case SDLK_COMMA: 
+            _projectMWrapper.MPDPrev(); 
+            break;
+        case SDLK_PERIOD: 
+            _projectMWrapper.MPDNext(); 
+            break;
+        case SDLK_c: 
+            _projectMWrapper.MPDPause(); 
+            break;
+        //case SDLK_RETURN:
+        //    _projectMWrapper.MPDPlay(); 
+        //    break;
+        case SDLK_l:
+            if(!_projectMGui.IsVisibleMPDWindow()){
+                _projectMWrapper.MPDListFiles(); 
+                _projectMGui.ShowMPDWindow();
+            }else{
+                _projectMGui.HideMPDWindow();
+            }
+            break;
+        
+        case SDLK_j:
+            if(!_projectMGui.IsVisibleMPDPlaylistsWindow()){
+                _projectMWrapper.MPDListPlaylists(); 
+                _projectMGui.ShowMPDPlaylistsWindow();
+            }else{
+                _projectMGui.HideMPDPlaylistsWindow();
+            }
+            break;
     }
 }
 

@@ -162,8 +162,9 @@ bool FileChooser::Draw()
             {
                 _selectedFiles.emplace_back(Poco::Path(_currentDir).makeDirectory());
             }
-            else
+            else if (_selectedFileIndices.empty() && _mode == Mode::File)
             {
+                _selectedFiles.emplace_back(_currentFileList.at(0));
                 // ToDo: Display "Select at least one entry from the list"
             }
 

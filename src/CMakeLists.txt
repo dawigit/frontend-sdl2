@@ -1,3 +1,5 @@
+set(CMAKE_POSITION_INDEPENDENT_CODE YES)
+
 add_subdirectory(notifications)
 add_subdirectory(gui)
 
@@ -68,6 +70,7 @@ target_link_libraries(projectMSDL
         Poco::Util
         SDL2::SDL2$<$<STREQUAL:${SDL2_LINKAGE},static>:-static>
         SDL2::SDL2main
+        mpdclient
         )
 
 if(MSVC)

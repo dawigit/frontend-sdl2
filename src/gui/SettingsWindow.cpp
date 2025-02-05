@@ -52,6 +52,7 @@ void SettingsWindow::Draw()
             DrawProjectMSettingsTab();
             DrawWindowSettingsTab();
             DrawAudioSettingsTab();
+            DrawMPDSettingsTab();
             DrawHelpTab();
 
             ImGui::EndTabBar();
@@ -71,6 +72,43 @@ void SettingsWindow::Draw()
             _changed = true;
         }
     }
+
+    if (_fileChooser.Draw())
+    {
+        auto& selectedFiles = _fileChooser.SelectedFiles();
+        if (!selectedFiles.empty())
+        {
+            _userConfiguration->setString(_fileChooser.Context(), Poco::Path(selectedFiles.at(0).path()).toString());
+            _changed = true;
+        }
+    }
+}
+
+void SettingsWindow::DrawMPDSettingsTab()
+{
+    if (ImGui::BeginTabItem("ProjectM MPD"))
+    {
+        if (ImGui::BeginTable("MPD", 5, ImGuiTableFlags_None))
+        {
+            ImGui::TableSetupColumn("##desc", ImGuiTableColumnFlags_WidthFixed, .0f);
+            ImGui::TableSetupColumn("##setting", ImGuiTableColumnFlags_WidthStretch, .0f);
+            ImGui::TableSetupColumn("##choose", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+            ImGui::TableSetupColumn("##reset", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+            ImGui::TableSetupColumn("##override", ImGuiTableColumnFlags_WidthFixed, .0f);
+
+            ImGui::TableNextRow();
+            LabelWithTooltip("host", "mpd host / socket.");
+            FileSetting("mpd.host");
+            
+            ImGui::TableNextRow();
+            LabelWithTooltip("port", "portnumber");
+            IntegerSetting("mpd.port", 6600, 1024,8196);
+
+            ImGui::EndTable();
+        }
+        ImGui::EndTabItem();
+    }
+
 }
 
 void SettingsWindow::DrawProjectMSettingsTab()
@@ -353,6 +391,42 @@ void SettingsWindow::PathSetting(const std::string& property)
         OverriddenSettingMarker();
     }
 }
+
+void SettingsWindow::FileSetting(const std::string& property)
+{
+    ImGui::TableSetColumnIndex(1);
+
+    auto path = _userConfiguration->getString(property, "");
+    char pathBuffer[2048]{};
+    strncpy(pathBuffer, path.c_str(), std::min<size_t>(2047, path.size()));
+
+    ImGui::SetNextItemWidth(-1);
+    if (ImGui::InputText(std::string("##path_" + property).c_str(), &pathBuffer[0], IM_ARRAYSIZE(pathBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+    {
+        _userConfiguration->setString(property, std::string(pathBuffer));
+        _changed = true;
+    }
+
+    ImGui::TableSetColumnIndex(2);
+
+    ImGui::PushID(std::string(property + "_ChoosePathButton").c_str());
+    if (ImGui::Button("..."))
+    {
+        _fileChooser.CurrentDirectory(path);
+        _fileChooser.Title("Select File");
+        _fileChooser.Context(property);
+        _fileChooser.Show();
+    }
+    ImGui::PopID();
+
+    ResetButton(property);
+
+    if (_commandLineConfiguration->has(property))
+    {
+        OverriddenSettingMarker();
+    }
+}
+
 
 
 void SettingsWindow::BooleanSetting(const std::string& property, bool defaultValue)

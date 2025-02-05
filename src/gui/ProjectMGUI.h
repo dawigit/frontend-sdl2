@@ -106,9 +106,26 @@ public:
     void ShowAboutWindow();
 
     /**
+     * @brief Displays the MPD window.
+     */
+    void ShowMPDWindow();
+    void HideMPDWindow();
+    bool IsVisibleMPDWindow();
+
+    /**
      * @brief Displays the help window.
      */
     void ShowHelpWindow();
+
+    /**
+     * @brief Get current MPDWindow queue item.
+     */
+    size_t GetMPDWindowCurrentItem();
+    size_t GetMPDPlaylistsWindowCurrentItem();
+    void ShowMPDPlaylistsWindow();
+    void HideMPDPlaylistsWindow();
+    bool IsVisibleMPDPlaylistsWindow();
+    void GotMouseMotion();
 
 private:
     float GetScalingFactor();
@@ -139,10 +156,15 @@ private:
     SettingsWindow _settingsWindow{*this}; //!< The settings window.
     AboutWindow _aboutWindow{*this}; //!< The about window.
     HelpWindow _helpWindow; //!< Help window with shortcuts and tips.
-
+    
     std::unique_ptr<ToastMessage> _toast; //!< Current toast to be displayed.
 
     bool _visible{false}; //!< Flag for settings window visibility.
+    bool _visibleMPDQ{false}; //!< Flag for settings window visibility.
+    bool _visibleMPDPL{false}; //!< Flag for settings playlists visibility.
+    bool _visibleMPDPV{false}; //!< Flag for settings preview visibility.
+
+    bool _gotMouseMotion{false};
 
     Poco::Logger& _logger{Poco::Logger::get("ProjectMGUI")}; //!< The class logger.
 
@@ -166,9 +188,19 @@ private:
     int    star1_image_height = 0;
     GLuint star1_image_texture = 0;
 
+    size_t current_part_idx{0};
+
     int windowWidth;
     int windowHeight;
     
+    std::string DataDir;
+    bool _showMouse{true};
+
+    bool _first_mpd_preview{false};
+
+    void DrawMPDWindow();
+    void DrawMPDPlaylistsWindow();
+    void DrawMPDPreviewWindow();
     void DrawPermText(std::string permText);
     bool LoadTextureFromFile(const char* file_name, GLuint* out_texture, int* out_width, int* out_height);
     bool LoadTextureFromMemory(const void* data, size_t data_size, GLuint* out_texture, int* out_width, int* out_height);
