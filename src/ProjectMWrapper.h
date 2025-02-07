@@ -141,9 +141,11 @@ public:
 
     std::string MPDGetSongName();
     std::string MPDGetSongInfo();
+    uint MPDGetSongId(uint pos);
 
     
     std::string MPDQGet(uint i);
+    bool MPDQDel(uint i);
     size_t      MPDQSize();
     std::string MPDPLGet(uint i);
     size_t      MPDPLSize();
@@ -153,9 +155,10 @@ public:
     void MPDListFiles();
     void MPDListFilesPreview(const char* name);
     void MPDListPlaylists();
-    void MPDPlayPlaylist(const char* name, bool clear_queue = true);
-    void MPDQueueAdd(){_mpd_queue_clear_add=false;}
-
+    void MPDQueueAddPlaylist(const char* name, bool clear_queue = true);
+    void MPDQueueAdd(const char* name);
+    void MPDQueueDelete(uint id);
+        
     void SetCursorDirUp(){cursor_dir = cursordir_up;}
     void SetCursorDirDown(){cursor_dir = cursordir_down;}
     void SetCursorDirPageUp(){cursor_dir =   cursordir_pageup;}
@@ -163,6 +166,7 @@ public:
     void SetCursorDirNone(){cursor_dir = cursordir_none;}
     CursorDir GetCD(){ return cursor_dir; }
     void SetCD(CursorDir cdir){ cursor_dir = cdir; }
+    int MPDQGetSongPos(){return _songPos;}
     
 private:
     /**
@@ -213,6 +217,8 @@ private:
     char infobuffer[1024];
     std::string _songName;
     std::string _songNameLast;
+    std::string _songURI;
+    std::string _songURILast;
     std::string _songInfo;
     std::vector<std::string> mpd_queue;
     std::vector<std::string> mpd_playlists;
@@ -226,6 +232,8 @@ private:
     bool _mpd_single{false};
     bool _mpd_queue_clear_add{true};
     int _mpd_volume{100};
+    
+    int _songPos{0};
 
     FILE *filedb;
     char buffer[1024];

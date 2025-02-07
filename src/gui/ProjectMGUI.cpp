@@ -180,7 +180,6 @@ void ProjectMGUI::Draw()
             _permText = _permText.substr(_permText.find_last_of("/")+1); // remove path prefix
             _permText = _permText.substr(0,_permText.size()-5); // remove '.milk' extension
             _projectMWrapper->MPDGetStatus();
-            //fprintf(stderr,"_permText: '%s'\n",_permText.c_str());
             _toast.reset();
         }else if (!_toast->Draw(secondsSinceLastFrame)){
             _toast.reset();
@@ -218,8 +217,8 @@ void ProjectMGUI::Draw()
 
     if(_visibleMPDQ){        DrawMPDWindow();    }
     if(_visibleMPDPL){        
-        DrawMPDPlaylistsWindow();    
         if(_visibleMPDPV) DrawMPDPreviewWindow();    
+        DrawMPDPlaylistsWindow();    
     }
 
     ImGui::Render();
@@ -339,6 +338,11 @@ void ProjectMGUI::DrawMPDPreviewWindow()
             if (mpd_pv_item_current > 10){                mpd_pv_item_current -= 10;
             }else{ mpd_pv_item_current = 0;}
             was_key = true;
+        }
+        if(  ImGui::IsKeyPressed(ImGuiKey_D) ){
+            printf("Item_APPEND '%s'\n",_projectMWrapper->MPDPVGet(mpd_pv_item_current).c_str());
+            _projectMWrapper->MPDQueueAdd(_projectMWrapper->MPDPVGet(mpd_pv_item_current).c_str());
+            mpd_item_current = 0;
         }    
         for (int n = 0; n < _projectMWrapper->MPDPVSize(); ++n) {
             bool is_selected = (n == mpd_pv_item_current);
@@ -359,6 +363,9 @@ void ProjectMGUI::DrawMPDWindow()
     ImGuiChildFlags childFlags = ImGuiSelectableFlags_Highlight;
     if(!_showMouse)childFlags = ImGuiChildFlags_NavFlattened;
     ImGui::Begin("Queue", &_visibleMPDQ, windowFlags);
+    
+    int songpos = _projectMWrapper->MPDQGetSongPos();
+
     bool was_key{false};
     const auto  draw_list_size = ImVec2(-1, -1);
     if (ImGui::BeginListBox("##draw_list_queue", draw_list_size)) {
@@ -390,7 +397,15 @@ void ProjectMGUI::DrawMPDWindow()
             _projectMWrapper->MPDPlayPos(mpd_item_current);
         }else if (ImGui::IsKeyPressed(ImGuiKey_Enter) ){
             _projectMWrapper->MPDPlayPos(mpd_item_current);
-        }
+        }else if(  ImGui::IsKeyPressed(ImGuiKey_Delete) ){
+            //printf("deleting %d [%d]\n",mpd_item_current);
+            _projectMWrapper->MPDQueueDelete(mpd_item_current);
+            _projectMWrapper->MPDQDel(mpd_item_current);
+            if(mpd_item_current == _projectMWrapper->MPDQSize())--mpd_item_current;
+            
+        }    
+        
+
         for (int n = 0; n < _projectMWrapper->MPDQSize(); n++) {
             bool is_selected = (n == mpd_item_current);
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
@@ -408,9 +423,20 @@ void ProjectMGUI::DrawMPDWindow()
                 _visibleMPDPV = false;
             
             }
-            if(mpd_item_current == n) childFlags |= ImGuiSelectableFlags_Highlight;
+            //if(mpd_item_current == n) childFlags |= ImGuiSelectableFlags_Highlight;
+            
+            
+            if(n == songpos){
+                ImGui::PushID(n);
+                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 0, 255));
+            }
             
             if (ImGui::Selectable(_projectMWrapper->MPDQGet(n).c_str(), is_selected) ) { mpd_item_current = n; }
+            
+            if(n == songpos){
+                ImGui::PopStyleColor(1);
+                ImGui::PopID();
+            }
             
             if (is_selected && was_key) { ImGui::SetScrollHereY(0.5f); ImGui::SetItemDefaultFocus(); }
             if(was_key && _projectMWrapper->GetCD() != cursordir_none)_projectMWrapper->SetCD(cursordir_none);
@@ -456,16 +482,15 @@ void ProjectMGUI::DrawMPDPlaylistsWindow()
         }    
         if (ImGui::IsKeyPressed(ImGuiKey_LeftShift)&&
             ImGui::IsKeyPressed(ImGuiKey_Enter)){
-            _projectMWrapper->MPDPlayPlaylist(_projectMWrapper->MPDPLGet(mpd_pl_item_current).c_str());
+            _projectMWrapper->MPDQueueAddPlaylist(_projectMWrapper->MPDPLGet(mpd_pl_item_current).c_str());
             _visibleMPDPL = false;
             mpd_item_current = 0;
         }else if( ImGui::IsKeyPressed(ImGuiKey_A) ){
-            printf("PlayPlaylist_ADD\n");
-            //_projectMWrapper->MPDQueueAdd(); // next PlayPlaylist *adds* to queue
-            _projectMWrapper->MPDPlayPlaylist(_projectMWrapper->MPDPLGet(mpd_pl_item_current).c_str(), false);
+            //printf("PlayPlaylist_ADD\n");
+            _projectMWrapper->MPDQueueAddPlaylist(_projectMWrapper->MPDPLGet(mpd_pl_item_current).c_str(), false);
             mpd_item_current = 0;
         }else if (ImGui::IsKeyPressed(ImGuiKey_Enter) ){
-            _projectMWrapper->MPDPlayPlaylist(_projectMWrapper->MPDPLGet(mpd_pl_item_current).c_str());
+            _projectMWrapper->MPDQueueAddPlaylist(_projectMWrapper->MPDPLGet(mpd_pl_item_current).c_str());
             mpd_item_current = 0;
         }
         for (int n = 0; n < _projectMWrapper->MPDPLSize(); ++n) {
@@ -473,12 +498,12 @@ void ProjectMGUI::DrawMPDPlaylistsWindow()
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
             {
                 is_selected = !is_selected;
-                _projectMWrapper->MPDPlayPlaylist(_projectMWrapper->MPDPLGet(mpd_pl_item_current).c_str());
+                _projectMWrapper->MPDQueueAddPlaylist(_projectMWrapper->MPDPLGet(mpd_pl_item_current).c_str());
             }
             if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
             {
                 is_selected = !is_selected;
-                _projectMWrapper->MPDPlayPlaylist(_projectMWrapper->MPDPLGet(mpd_pl_item_current).c_str());
+                _projectMWrapper->MPDQueueAddPlaylist(_projectMWrapper->MPDPLGet(mpd_pl_item_current).c_str());
                 _visibleMPDQ = false;
             }
             if (ImGui::Selectable(_projectMWrapper->MPDPLGet(n).c_str(), is_selected)) { mpd_pl_item_current = n; }
@@ -491,8 +516,6 @@ void ProjectMGUI::DrawMPDPlaylistsWindow()
                 _visibleMPDPV = true;
                 _showMouse = false;
             }
-            
-            
         }
         ImGui::EndListBox();
         if(!_first_mpd_preview){

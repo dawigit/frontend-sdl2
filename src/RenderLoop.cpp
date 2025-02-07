@@ -142,7 +142,7 @@ void RenderLoop::KeyEvent(const SDL_KeyboardEvent& event, bool down)
     {
         modifierPressed = true;
     }
-   // if(keyCode&&keyModifier) fprintf(stderr,"key: %02x [%02x]\n",keyCode,keyModifier);
+    // if(keyCode&&keyModifier) fprintf(stderr,"key: %02x [%02x]\n",keyCode,keyModifier);
     // Handle modifier keys and save state for use in other methods, e.g. mouse events
     switch (keyCode)
     {

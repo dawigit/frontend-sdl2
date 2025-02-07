@@ -535,14 +535,18 @@ void ProjectMWrapper::MPDGetStatus()
 
             struct mpd_song *song = mpd_recv_song(mpdc);
             if (song != NULL) {
-                _songName = mpd_song_get_uri(song);
-                _songName = _songName.substr(_songName.find_last_of("/")+1);
+                _songURI = mpd_song_get_uri(song);
+                _songName = _songURI.substr(_songURI.find_last_of("/")+1);
                 mpd_song_free(song);
                 if(_songName != _songNameLast){
                     Poco::NotificationCenter::defaultCenter().postNotification(
                         new DisplayToastNotification(Poco::format("MPD: %s", std::string(_songName))));
                     poco_information_f1(_logger, "Playing: %s", std::string(_songName));
                     _songNameLast = _songName;
+                }
+                if(_songURI != _songURILast){
+                    _songURILast = _songURI;
+                    _songPos = mpd_status_get_song_pos(status);
                 }
             }
 
@@ -575,19 +579,27 @@ std::string ProjectMWrapper::MPDGetSongInfo(){
     return _songInfo;
 }
 
+uint ProjectMWrapper::MPDGetSongId(uint pos){
+    struct mpd_song* song = mpd_run_get_queue_song_id(mpdc,pos);
+    if (song == NULL) printErrorAndExit();
+    return mpd_song_get_id(song);
+}
+
 void ProjectMWrapper::MPDNext(){
     mpd_run_next(mpdc);
 }
+
 void ProjectMWrapper::MPDPrev(){
     mpd_run_previous(mpdc);
 }
+
 void ProjectMWrapper::MPDStop(){
     mpd_run_stop(mpdc);
 }
+
 void ProjectMWrapper::MPDPlay(){
     mpd_run_play(mpdc);
     MPDGetStatus();
-    
 }
 void ProjectMWrapper::MPDPlayId(uint i){
     mpd_response_finish(mpdc);
@@ -627,7 +639,6 @@ bool ProjectMWrapper::MPDConnect()
         printf("mpd connected ;)\n");
         return true;
     }   
-
 }
 
 void ProjectMWrapper::MPDListFilesPreview(const char* name)
@@ -701,13 +712,14 @@ void ProjectMWrapper::MPDListPlaylists()
 
 
 std::string ProjectMWrapper::MPDQGet(uint i){    return mpd_queue.at(i);}
+bool ProjectMWrapper::MPDQDel(uint i){    fprintf(stderr,"mpdqdel: %d\n",i);mpd_queue.erase(mpd_queue.begin()+i); return true;}
 size_t      ProjectMWrapper::MPDQSize(){    return mpd_queue.size();}
 std::string ProjectMWrapper::MPDPLGet(uint i){    return mpd_playlists.at(i);}
 size_t      ProjectMWrapper::MPDPLSize(){    return mpd_playlists.size();}
 std::string ProjectMWrapper::MPDPVGet(uint i){    return mpd_preview.at(i);}
 size_t      ProjectMWrapper::MPDPVSize(){    return mpd_preview.size();}
 
-void ProjectMWrapper::MPDPlayPlaylist(const char* name, bool clear_queue){
+void ProjectMWrapper::MPDQueueAddPlaylist(const char* name, bool clear_queue){
     //printf("Playlist '%s' [%d]\n",name,clear_queue?1:0);
     if(clear_queue){
         if (!mpd_command_list_begin(mpdc, true) ||
@@ -734,4 +746,20 @@ void ProjectMWrapper::MPDPlayPlaylist(const char* name, bool clear_queue){
     MPDGetStatus();
     
 }
+void ProjectMWrapper::MPDQueueAdd(const char* name){
+    if (!mpd_command_list_begin(mpdc, true) ||
+            !mpd_send_add(mpdc, name) ||
+            !mpd_command_list_end(mpdc)
+        ) printErrorAndExit();
+    mpd_response_finish(mpdc);
+    Poco::NotificationCenter::defaultCenter().postNotification(
+        new DisplayToastNotification(Poco::format("Item '%s' added", std::string(name))));
+}
 
+void ProjectMWrapper::MPDQueueDelete(uint id){
+    if (!mpd_command_list_begin(mpdc, true) ||
+            !mpd_send_delete(mpdc, id) ||
+            !mpd_command_list_end(mpdc)
+        ) printErrorAndExit();
+    mpd_response_finish(mpdc);
+}
